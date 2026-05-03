@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, AlertTriangle, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -41,10 +41,14 @@ export default function AdminAgricultorDetailPage({ params }: { params: Promise<
             <h1 className="font-epilogue font-bold text-xl text-on-surface">{farmer.name}</h1>
           </div>
           <Dialog>
-            <DialogTrigger>
-              <Button variant="destructive" size="sm" disabled={suspended}>
-                {suspended ? "Suspendido" : "Suspender agricultor"}
-              </Button>
+            <DialogTrigger
+              className={cn(
+                buttonVariants({ variant: "destructive", size: "sm" }),
+                suspended && "opacity-50 pointer-events-none"
+              )}
+              disabled={suspended}
+            >
+              {suspended ? "Suspendido" : "Suspender agricultor"}
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>

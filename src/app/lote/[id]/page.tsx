@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Printer, Package, Calendar, Hash, User, MapPin, ChevronRight, ShoppingCart } from "lucide-react";
+import { Package, Calendar, Hash, User, MapPin, ChevronRight, ShoppingCart } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { PrintButton } from "@/components/print-button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { TraceabilityTimeline } from "@/components/traceability-timeline";
@@ -21,8 +22,9 @@ const certColors: Record<string, string> = {
   Orgánico: "bg-primary-container text-on-primary-container",
 };
 
-export default function LotePage({ params }: { params: { id: string } }) {
-  const product = mockProducts.find((p) => p.lotNumber === params.id);
+export default async function LotePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const product = mockProducts.find((p) => p.lotNumber === id);
 
   if (!product) notFound();
 
@@ -55,16 +57,7 @@ export default function LotePage({ params }: { params: { id: string } }) {
               <p className="text-on-primary/60 text-xs uppercase tracking-widest mb-1">Número de lote</p>
               <p className="font-mono font-bold text-2xl text-secondary-container tracking-wider">{product.lotNumber}</p>
             </div>
-            <button
-              onClick={() => typeof window !== "undefined" && window.print()}
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "border-on-primary/30 text-on-primary hover:bg-on-primary/10 gap-2 print:hidden"
-              )}
-            >
-              <Printer className="w-4 h-4" />
-              Imprimir
-            </button>
+            <PrintButton />
           </div>
           <div className="flex flex-wrap gap-6 text-sm">
             <div className="flex items-center gap-2">

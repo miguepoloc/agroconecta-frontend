@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShoppingBag, Users, Sprout, LogOut,
   Menu, ChevronRight, Package, Leaf,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth-context";
@@ -134,10 +134,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile sidebar */}
       <Sheet>
         <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-outline-variant h-14 flex items-center px-4 gap-3">
-          <SheetTrigger>
-            <Button variant="ghost" size="icon">
-              <Menu className="w-5 h-5" />
-            </Button>
+          <SheetTrigger className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}>
+            <Menu className="w-5 h-5" />
           </SheetTrigger>
           <Link href="/" className="flex items-center gap-2">
             <Leaf className="w-5 h-5 text-primary" />

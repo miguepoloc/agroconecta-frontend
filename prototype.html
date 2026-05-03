@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgroConecta — Prototipo de Flujo</title>
+<style>
+  :root {
+    --green: #012d1d;
+    --yellow: #ffb702;
+    --cream: #f9faf6;
+    --green-mid: #1b4332;
+    --gray: #717973;
+    --border: #c1c8c2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, system-ui, sans-serif; background: #0f1f18; color: white; min-height: 100vh; }
+
+  /* ── Header ── */
+  header {
+    background: var(--green);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #1b4332;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-family: 'Epilogue', serif; font-size: 20px; font-weight: 700; color: white; }
+  .logo span { color: var(--yellow); }
+  .subtitle { font-size: 13px; color: #86af99; margin-top: 2px; }
+  .screen-counter { background: var(--green-mid); padding: 6px 14px; border-radius: 20px; font-size: 13px; color: #a5d0b9; }
+
+  /* ── Flow tabs ── */
+  .flow-tabs {
+    display: flex; gap: 4px; padding: 16px 32px 0;
+    border-bottom: 1px solid #1b4332;
+    overflow-x: auto;
+  }
+  .flow-tab {
+    padding: 8px 16px; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; background: transparent; color: #86af99;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .flow-tab.active { background: var(--cream); color: var(--green); }
+  .flow-tab:hover:not(.active) { background: #1b4332; color: white; }
+
+  /* ── Viewer ── */
+  .viewer { padding: 24px 32px; }
+  .flow-section { display: none; }
+  .flow-section.active { display: block; }
+
+  /* ── Screen grid ── */
+  .screen-row {
+    display: flex; align-items: flex-start; gap: 24px;
+    margin-bottom: 32px; flex-wrap: wrap;
+  }
+  .screen-card {
+    background: #1a2e23;
+    border: 1px solid #1b4332;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 0 0 auto;
+    width: 280px;
+  }
+  .screen-card:hover { border-color: var(--yellow); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .screen-card.selected { border-color: var(--yellow); box-shadow: 0 0 0 2px var(--yellow); }
+  .card-header {
+    padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #1b4332;
+  }
+  .card-title { font-size: 12px; font-weight: 600; color: white; }
+  .card-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600;
+  }
+  .tag-exists { background: #1b4332; color: #a5d0b9; }
+  .tag-new { background: #7d5800; color: #ffba27; }
+  .tag-pending { background: #2c1f1f; color: #f87171; }
+  .screen-thumb {
+    width: 100%; height: 180px; object-fit: cover; object-position: top;
+    display: block; background: #0f1f18;
+  }
+  .screen-placeholder {
+    width: 100%; height: 180px; background: #0f1f18;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    color: #414844; font-size: 12px;
+  }
+  .screen-placeholder svg { opacity: 0.3; }
+  .card-footer { padding: 10px 14px; font-size: 11px; color: #86af99; }
+
+  /* ── Arrow connector ── */
+  .arrow {
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px;
+    color: var(--yellow); font-size: 20px; align-self: center;
+    flex: 0 0 32px;
+  }
+  .arrow-label { font-size: 10px; color: #86af99; text-align: center; white-space: nowrap; }
+
+  /* ── Full screen modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #1a2e23; border: 1px solid #1b4332; border-radius: 16px;
+    width: 90vw; max-width: 1200px; max-height: 92vh;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-header {
+    padding: 16px 20px; border-bottom: 1px solid #1b4332;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-close {
+    background: transparent; border: none; color: #86af99;
+    font-size: 22px; cursor: pointer; line-height: 1;
+  }
+  .modal-close:hover { color: white; }
+  .modal-nav {
+    display: flex; gap: 8px; padding: 12px 20px;
+    border-bottom: 1px solid #1b4332; overflow-x: auto;
+  }
+  .modal-nav-btn {
+    padding: 6px 12px; border-radius: 6px; font-size: 12px;
+    border: 1px solid #1b4332; background: transparent; color: #86af99;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .modal-nav-btn:hover { background: var(--green); color: white; border-color: var(--green); }
+  .modal-nav-btn.active-nav { background: var(--yellow); color: var(--green); border-color: var(--yellow); font-weight: 600; }
+  .modal-body { overflow-y: auto; flex: 1; }
+  .modal-body img { width: 100%; display: block; }
+  .modal-body .placeholder-full {
+    min-height: 400px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px;
+    color: #414844; font-size: 14px;
+  }
+
+  /* ── Section title ── */
+  .section-title {
+    font-family: 'Epilogue', serif;
+    font-size: 18px; font-weight: 700;
+    color: var(--yellow); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-desc { font-size: 13px; color: #86af99; margin-bottom: 24px; }
+  .flow-legend {
+    display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #86af99; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">Agro<span>Conecta</span></div>
+    <div class="subtitle">Prototipo de Flujo — Vital Harvest Design System</div>
+  </div>
+  <div class="screen-counter" id="screenCounter">18 pantallas activas</div>
+</header>
+
+<div class="flow-tabs">
+  <button class="flow-tab active" onclick="showFlow('comprador')">🛒 Flujo Comprador</button>
+  <button class="flow-tab" onclick="showFlow('institucional')">🏫 Flujo Institucional</button>
+  <button class="flow-tab" onclick="showFlow('agricultor')">🌱 Flujo Agricultor</button>
+  <button class="flow-tab" onclick="showFlow('admin')">⚙️ Flujo Admin</button>
+  <button class="flow-tab" onclick="showFlow('todas')">📋 Todas las pantallas</button>
+</div>
+
+<div class="viewer">
+
+  <!-- ── FLUJO COMPRADOR ── -->
+  <div class="flow-section active" id="flow-comprador">
+    <div class="section-title">🛒 Flujo del Comprador Individual</div>
+    <p class="section-desc">Recorrido desde el landing hasta la confirmación de compra. Haz clic en cualquier pantalla para verla en detalle.</p>
+    <div class="flow-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#a5d0b9"></div>Pantalla existente</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffba27"></div>Creada en esta sesión</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Pendiente de crear</div>
+    </div>
+
+    <div class="screen-row">
+      <div class="screen-card" onclick="openModal('inicio')">
+        <div class="card-header"><span class="card-title">1. Landing / Inicio</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhVJhzM71fGR0-rk5Gp-nBeXO8aCgH0xox57MDSHOQrgt0WOfwVAWlhPAtamkZ37icNItGS7xWpzof54WfPRaNEUezPiz66dAuVmx4jh19hfaUwD05wp7AZ4a6mEu0vDMfkc-JM5WqnSsgAICeSvjVXy0alT2IgMAOjTcqNTRQhzNks_XGHLlIAICXv9gu1ARwd4LSHSinR4TixQV7-OEHW5FSbcZxyOraqhiHWkpK0DB2bNuSvQ3q7VbE" alt="Inicio">
+        <div class="card-footer">Hero · Propósito · Productos destacados</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Ver Productos</div></div>
+
+      <div class="screen-card" onclick="openModal('catalogo')">
+        <div class="card-header"><span class="card-title">2. Catálogo</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uiQrRQ-gLUjaK6A9TNFTHIxD2esKjWV6-eDn0WAIPO2d3lxrOn5mgBZUopZ1bpMaLWMMHWarNegZlJSiaO52xptMd1sqayvqApG8xGWIApHCbSNJXo3BPLxqfhH-mP8xZSfn3kvAzKy4PoryXcu19cWLXb9E5pPR_y2mfA4iDid2gd0omM7mLVvV1rDDkK222iKygSlAXcD1W8isFNOqkOJyVIxINZbY59BWSx9z7bpUrtt-yFStTYx_v0" alt="Catálogo">
+        <div class="card-footer">Grid · Filtros · Paginación</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Ver Detalle</div></div>
+
+      <div class="screen-card" onclick="openModal('detalle')">
+        <div class="card-header"><span class="card-title">3. Detalle Producto</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhF8EMtQ3SMXzus-uPedU_qEdBPFlkftHo7IOwRk_BCNNeRfHjcBXsKlfzFKUIc-VBsg4QhEfZ-Ib53VJwcycg-bJkHdYpxPLYt-RH86gKCgzxyH7ZaJ9lZC73JBHQ4hrIrqJb-3Y47NNNqGPj9i0b4a73G5hh6KYT_KM_z-CPFz90dFPb67QQyBmaL2BoXNc2f38wIAnZ008ffdnNUYuW3u19dPi_Cv0Oxzn_f1qusHOhGTyhKA10Qgg0" alt="Detalle">
+        <div class="card-footer">Galería · Perfil agricultor · Trazabilidad</div>
+      </div>
+    </div>
+
+    <div class="screen-row">
+      <div class="screen-card" onclick="openModal('carrito')">
+        <div class="card-header"><span class="card-title">4. Carrito</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhAEJXbs62Dcm-pV8p9GvGC85AsqL4KFi2EEQjHv0ekQg_NmfYEoa0h0s4ftGwGFYUeVWYLxD-1XMX-MuRsAYEJokSeuH5xIgCWa19go_AUQCZ4E6-FzGJONQPoL1DKivNMQmPblIpaXRVOCiwxixud8oAAS38tViFLPA1uEJPsqBBZOYcVCp0KwmiNBkC-Q_gCK-Zvi3jHw0DNxfgtVf7TnBE3p4csVKjK-SCEIkTplK83AbhwnIr0uA" alt="Carrito">
+        <div class="card-footer">Items · 82% impacto · Resumen</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Proceder al Pago</div></div>
+
+      <div class="screen-card" onclick="openModal('checkout')">
+        <div class="card-header"><span class="card-title">5. Checkout — Entrega</span><span class="card-tag tag-new">Nueva</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uiDdrROWT-0IkmjBgq-lCKcmQHmBUD8t9hBvx6R6Mf-S0viNQTcOxiBsD-MBn-3vZ3vAUDbdxLQq64AkypGGi5RR2lmU-G-ldNsVbSY9uohTcAxqAcFRBZLlGJcWu31tKTWPUzWbCZKrjDQKo3VeJx_RIUYLrWAhBbKF_DzOAtEr4SXGBcK0A5zazM1ErSt_ggh9SJmu-IwBPLAOtyVgmXCDqON0JHPMIZhYO4VgtVqx0gm21cQj7Z2kLY" alt="Checkout">
+        <div class="card-footer">Datos · Dirección · Método envío</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Continuar</div></div>
+
+      <div class="screen-card" onclick="openModal('pago')">
+        <div class="card-header"><span class="card-title">6. Pago</span><span class="card-tag tag-new">Nueva</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhi41wUL99pt9COTgpcb6trujEt_QvDF5SlTS0pfQYrUGeEWkTTH_y_ygri0L6021TQwfXYkBrk-81rzvf5K_loOplmIbLROntEJ4O6yCArTeroP83mqAmy-CphxQM66z3BdMS1kMttVWIGlztBqGW28YgMiBN6wVH7CPPp3x8FqODwgnH13tSmbCzZr5rXxOw7MJpI-zIkbp4Ypszv9i9vX3Ug0c_wcwcSQ0RFdaKVN6ecY7KX-p0VHmM" alt="Pago">
+        <div class="card-footer">Tarjeta · PSE · Nequi</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Pagar</div></div>
+
+      <div class="screen-card" onclick="openModal('confirmacion')">
+        <div class="card-header"><span class="card-title">7. Confirmación</span><span class="card-tag tag-new">Nueva</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0ugez1hMCz6ZTDT6EyRMb4oAEeLjhXEuAnHS6-5_2WHSS-wKbmFTIbe6A9OWGREW9Hx1KnXThKLsOOrc8a0DDzlsPXOLogcwNSNSfr3dESIiQI6IQnfIENKSv7pjoSZR1yNYSNF5_y5jstoW-tnN1eLJGi1SQx0iPQK8xMiKpupjWTcqap6sE7h2s6efITfe4z3EgrzA5RC8VhgTNs10wvfAo9E6djkGTwDrKBEx7fwSJfIZDSOVP3YHDw" alt="Confirmación">
+        <div class="card-footer">Número pedido · Resumen · Timeline</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FLUJO INSTITUCIONAL ── -->
+  <div class="flow-section" id="flow-institucional">
+    <div class="section-title">🏫 Flujo del Comprador Institucional</div>
+    <p class="section-desc">Recorrido para colegios, hospitales y comedores públicos. Incluye órdenes de compra, pedidos programados y trazabilidad legal.</p>
+
+    <div class="screen-row">
+      <div class="screen-card" onclick="openModal('inicio')">
+        <div class="card-header"><span class="card-title">1. Landing</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhVJhzM71fGR0-rk5Gp-nBeXO8aCgH0xox57MDSHOQrgt0WOfwVAWlhPAtamkZ37icNItGS7xWpzof54WfPRaNEUezPiz66dAuVmx4jh19hfaUwD05wp7AZ4a6mEu0vDMfkc-JM5WqnSsgAICeSvjVXy0alT2IgMAOjTcqNTRQhzNks_XGHLlIAICXv9gu1ARwd4LSHSinR4TixQV7-OEHW5FSbcZxyOraqhiHWkpK0DB2bNuSvQ3q7VbE" alt="Inicio">
+        <div class="card-footer">Falta: sección "¿Eres institución?"</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Registrarse</div></div>
+
+      <div class="screen-card" onclick="openModal('registro')">
+        <div class="card-header"><span class="card-title">2. Registro</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhrprxzt4Z-Yrgxy6sonugcD0_oA2iwhGeW2VPDZL1KzbZRcWAOhG1sl3TPQhjg4kwUQnEmfI8EqNEhuSBoGKkpaHQwbTo32ma108wzqaa4OSavPFY2ATdZipcEpOuyfhYI0k-te2yiLS75OgonCNoOjgAZgEAxuj0A2vU2Jnb0h9KPPDs9qNWM7f3w2tzYGiugbFV7fyFAL2QBspNNLe1dW15AMToFc2iXqAoVyu9MkEpwbeYLCEpGqNk" alt="Registro">
+        <div class="card-footer">Falta: rol "Soy Institución" + NIT</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Acceder</div></div>
+
+      <div class="screen-card" onclick="openModal('portal-institucional')">
+        <div class="card-header"><span class="card-title">3. Portal Institucional</span><span class="card-tag tag-new">Nueva</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uipJA8vlFMgf_wPio51JNazFlk4lprYwu6vZzwLowGbrtU5c52GVl4Ja-Z5J9vzwAKMLyUNsUB5Q8FvmpqtQUAloJzrYYPq2MRIToanu9fUGL5bbqhZP0yfTU396nnvv5lUWII8H1nGLppoZLwZKQ4ogSNYM1ZqW8trUKWZ8o383gm5REDhEDMTlEEXw6nH3DOT0ZE5ihs3i2RRYLdY7aXQ0fC6mgPz_sdpD2vpyLcKdFmyX6DvH0CZP9c" alt="Portal Institucional">
+        <div class="card-footer">Dashboard · Pedidos · Órdenes · Docs</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Trazabilidad</div></div>
+
+      <div class="screen-card" onclick="openModal('trazabilidad')">
+        <div class="card-header"><span class="card-title">4. Trazabilidad Pública</span><span class="card-tag tag-new">Nueva</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhmZYa19WlTf9h4ziXZA1Pl2fZY0J_nMwFgR-cCZmH93ejjXl7CncJ5uNsRfj3Os87cnADvBs57RGYH-MY2CXSFSILGq0XQXa94uAwrtWOyuj-GIq5RX2SlJcm6UEzAkgJ9iNBzQggEIoH_e6io6x1apconzHkcLOtB1WvycAwxqzmlv1TXxPjZA53ebHTajLHugW4nZp9OrVge1IFzaD9_-2KPh41NX08MRaIy9Kw1cSseTtfOhwM-hEc" alt="Trazabilidad">
+        <div class="card-footer">LOT · Timeline cosecha · Certs ICA/INVIMA · QR</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FLUJO AGRICULTOR ── -->
+  <div class="flow-section" id="flow-agricultor">
+    <div class="section-title">🌱 Flujo del Agricultor</div>
+    <p class="section-desc">Panel de gestión para agricultores: productos, cumplimiento normativo y ventas.</p>
+
+    <div class="screen-row">
+      <div class="screen-card" onclick="openModal('acceso')">
+        <div class="card-header"><span class="card-title">1. Login</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0ujZNKOkcSx7GTh44rrl5-vuR2E1DFuDIgbfQvyGKJhVu8Jod9Uzg7-_ZskdYVFduRNr2yMiEezg5DLsa29vlsIvD_2jpWo_QFjHhWu6cQ8A9P3kqewEJhBQCwFjKObDzKl1ckf011Pty2BWddafLwQpApxL1NBCaQ3MmYoxzwPafndr-0JZjOYdGeLUeazZ0pawFtkkXhEKFgSSPeWwgRrWp9IhiQrSXjIETiNT-CNGL1qhleqRLIyI-KI" alt="Acceso">
+        <div class="card-footer">Email + contraseña · Google OAuth</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Ingresar</div></div>
+
+      <div class="screen-card" onclick="openModal('panel-agricultor')">
+        <div class="card-header"><span class="card-title">2. Panel Agricultor</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uj27W18AMvp1fCAhEthE6CyhVzAdPDxlCzz9j_ZhSCTF05YAIlQRRQVWTv3WzpY9GIullWgcn4HyasTJyXEScxbJ0lufXTFkjHCRO1eee-d7lkUEBKRxDWS_iv9UatXj1lgJLnZit4ir9rxSz2GgKa1kr8tI6Fi3G_Xm4WIduE-zsOphokN6fMk2Bs1TrHCoUqAJh52lRC7g-UwSxXuzcNOkBQfuVJT4n7vTDWW_5uqgAmft_IKyrffyZA" alt="Panel Agricultor">
+        <div class="card-footer">Ventas · Productos · Compliance · Docs</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FLUJO ADMIN ── -->
+  <div class="flow-section" id="flow-admin">
+    <div class="section-title">⚙️ Flujo Administrativo</div>
+    <p class="section-desc">Panel de control interno: métricas, pedidos y gestión de agricultores.</p>
+
+    <div class="screen-row">
+      <div class="screen-card" onclick="openModal('panel-admin')">
+        <div class="card-header"><span class="card-title">1. Panel Admin</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uikZOQJgGdOvLYGW0CHR745ZxirlPcQj7osITrfWSNY8XPOLomdBo2Sib9DmyRebjBf0lrJFMif3Du_hQ_Q6L9k1-1hXP1extu23-KhwHU_9ILD9uDlXm9Vwxt_ZbunUFZtVPGKyPGGtpciY2ygZ1ZWohC3MzL2xQbDSHSUeumB4Ynmh6vJmlpggTpc1mbRUiVFsOm0jGp7ETDjPXI_xQA02kjHhYE_8ufQk5UNsO9iA8eWWGvqMMTENM4" alt="Admin">
+        <div class="card-footer">KPIs · Gráfica ventas · Pedidos recientes</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Ver Pedidos</div></div>
+
+      <div class="screen-card" onclick="openModal('lista-pedidos')">
+        <div class="card-header"><span class="card-title">2. Lista de Pedidos</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uiS56-H8v9N1ut-zI65Z48Xji6SgC5TTBynVXFhz0PeRlbJJKw29d_dt2CJD6rkgitVRmlDI1Saqocy3q4Rz4UCJ-RJ343vWblaJPnQAb_MmDyzishj1d-CM5usnP800dRUROLYZ4jIs_98OP8XqlMQ-Cp1ilch9belqPoNpBRQwH8m1aOIL2kOvR95wF4BHfiXqLM-hRCcESAj7XV8s2EpXC2sluSATeCK7NhFm78ValNpMKNQ6QjsrQw" alt="Lista Pedidos">
+        <div class="card-footer">Tabla · Estados · Filtros</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Ver Detalle</div></div>
+
+      <div class="screen-card" onclick="openModal('detalle-pedido')">
+        <div class="card-header"><span class="card-title">3. Detalle Pedido</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0ugYpD73ETjdqadcsJlfRCX1DSnTp4vgq_OtVmSJMDV2XW30-2aIJiIBo9245_IZmqgPl7LPxOBzbaS4XTGZfNmd7kMDsUWL_2xWgTckayEDYQqvKI4gbDf-RGUgK2R6bubmX5R6mgTLz9jzaI0bZjP-Vh6cUs634uw-p0H8WDyW7EhZgayFOiDrpCfI5aSscVQ9953jm7Qe-D2kZCaDEMAnAskpLW9WqOUQiU_yt7TMyF76kfSSWssF7sE" alt="Detalle Pedido">
+        <div class="card-footer">Info cliente · Productos · Estado · Acciones</div>
+      </div>
+    </div>
+
+    <div class="screen-row">
+      <div class="screen-card" onclick="openModal('lista-agricultores')">
+        <div class="card-header"><span class="card-title">4. Lista Agricultores</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uiIiQ28ZqC94vDnXnpJItmgh_3TrgxJh0a9xsyHO_9aA5g0izjnHHTNaGYVSuP3JAnxJlf9afAmKwEDUdvt89nbA5rbzz0sjx8mzqVcL-Bz-HtY3iLDSzMDpAOxgLwR2uC61waJZUUqzwJqVV1EVtwY0uz05CJi3vM0Sx-1UIpfCbARDk2HdRixJzhN7auuQzLDwoWAIZk2HcQzcyDFO1GIKqrH2IzgF1Kr5yliZNQ_mkq0ttWbsUQdCtE" alt="Lista Agricultores">
+        <div class="card-footer">Tabla agricultores · Compliance · Ventas</div>
+      </div>
+      <div class="arrow">→<div class="arrow-label">Ver Perfil</div></div>
+
+      <div class="screen-card" onclick="openModal('detalle-agricultor')">
+        <div class="card-header"><span class="card-title">5. Detalle Agricultor</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0ugqS3anj7QkoTq-yQnPx9K0iVAONLpiNpEmlpvIwH7HDJd_MZ4x4fV5vqPYHW-id_sljL591ltlnCiPb3-qPo0gZ83zyqcuSwVgwylsvf5Ah7TbpaWkPytqKK9K3TX9rVnF0jKTFycZRUjhjb4iZWJv2p-DPTXGy75E3rYx89-wyTYjfQT0Yh2-RmFPs2OKg0B0g4pBwRH3eGAmm6Ln0eFv15dwlO__XNg1WG2D-CG7LhP8jCf5qLoYVg" alt="Detalle Agricultor">
+        <div class="card-footer">Perfil · Productos · Certificaciones</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TODAS LAS PANTALLAS ── -->
+  <div class="flow-section" id="flow-todas">
+    <div class="section-title">📋 Inventario Completo de Pantallas</div>
+    <p class="section-desc">Las 18 pantallas del proyecto ordenadas por rol y estado.</p>
+    <div class="screen-row" style="flex-wrap: wrap; gap: 16px;">
+
+      <div class="screen-card" onclick="openModal('inicio')">
+        <div class="card-header"><span class="card-title">Landing / Inicio</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhVJhzM71fGR0-rk5Gp-nBeXO8aCgH0xox57MDSHOQrgt0WOfwVAWlhPAtamkZ37icNItGS7xWpzof54WfPRaNEUezPiz66dAuVmx4jh19hfaUwD05wp7AZ4a6mEu0vDMfkc-JM5WqnSsgAICeSvjVXy0alT2IgMAOjTcqNTRQhzNks_XGHLlIAICXv9gu1ARwd4LSHSinR4TixQV7-OEHW5FSbcZxyOraqhiHWkpK0DB2bNuSvQ3q7VbE" alt="Inicio">
+        <div class="card-footer">Público</div>
+      </div>
+      <div class="screen-card" onclick="openModal('catalogo')">
+        <div class="card-header"><span class="card-title">Catálogo con Paginación</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uiQrRQ-gLUjaK6A9TNFTHIxD2esKjWV6-eDn0WAIPO2d3lxrOn5mgBZUopZ1bpMaLWMMHWarNegZlJSiaO52xptMd1sqayvqApG8xGWIApHCbSNJXo3BPLxqfhH-mP8xZSfn3kvAzKy4PoryXcu19cWLXb9E5pPR_y2mfA4iDid2gd0omM7mLVvV1rDDkK222iKygSlAXcD1W8isFNOqkOJyVIxINZbY59BWSx9z7bpUrtt-yFStTYx_v0" alt="Catálogo">
+        <div class="card-footer">Público</div>
+      </div>
+      <div class="screen-card" onclick="openModal('detalle')">
+        <div class="card-header"><span class="card-title">Detalle de Producto</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhF8EMtQ3SMXzus-uPedU_qEdBPFlkftHo7IOwRk_BCNNeRfHjcBXsKlfzFKUIc-VBsg4QhEfZ-Ib53VJwcycg-bJkHdYpxPLYt-RH86gKCgzxyH7ZaJ9lZC73JBHQ4hrIrqJb-3Y47NNNqGPj9i0b4a73G5hh6KYT_KM_z-CPFz90dFPb67QQyBmaL2BoXNc2f38wIAnZ008ffdnNUYuW3u19dPi_Cv0Oxzn_f1qusHOhGTyhKA10Qgg0" alt="Detalle">
+        <div class="card-footer">Público</div>
+      </div>
+      <div class="screen-card" onclick="openModal('vista-rapida')">
+        <div class="card-header"><span class="card-title">Vista Rápida Producto</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhw3Lgj1aD7bvTWOAITfXEqK2zp49SHMfofmXnbAftDDBCa2Z4XUs6Zhm25oVWKbo7ClyGSayY-EnVuhhyLMt_2gbbeb8aXq9OWJrFT7zjbu5YzBqmuVVKrr5JtIjsRx0lZuqXn6bs7yHffTOrzi3g01tuhsVwhaQcDqYDVB5nYoEnaAqtKawNX8vY_9vO3F87MWOtKNwTo4RCA7XrFxkWPYy5N4qgLJNi56zObKRE64D_IO2icAHxku30" alt="Vista Rápida">
+        <div class="card-footer">Modal</div>
+      </div>
+      <div class="screen-card" onclick="openModal('acceso')">
+        <div class="card-header"><span class="card-title">Acceso / Login</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0ujZNKOkcSx7GTh44rrl5-vuR2E1DFuDIgbfQvyGKJhVu8Jod9Uzg7-_ZskdYVFduRNr2yMiEezg5DLsa29vlsIvD_2jpWo_QFjHhWu6cQ8A9P3kqewEJhBQCwFjKObDzKl1ckf011Pty2BWddafLwQpApxL1NBCaQ3MmYoxzwPafndr-0JZjOYdGeLUeazZ0pawFtkkXhEKFgSSPeWwgRrWp9IhiQrSXjIETiNT-CNGL1qhleqRLIyI-KI" alt="Acceso">
+        <div class="card-footer">Auth</div>
+      </div>
+      <div class="screen-card" onclick="openModal('registro')">
+        <div class="card-header"><span class="card-title">Registro de Usuario</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhrprxzt4Z-Yrgxy6sonugcD0_oA2iwhGeW2VPDZL1KzbZRcWAOhG1sl3TPQhjg4kwUQnEmfI8EqNEhuSBoGKkpaHQwbTo32ma108wzqaa4OSavPFY2ATdZipcEpOuyfhYI0k-te2yiLS75OgonCNoOjgAZgEAxuj0A2vU2Jnb0h9KPPDs9qNWM7f3w2tzYGiugbFV7fyFAL2QBspNNLe1dW15AMToFc2iXqAoVyu9MkEpwbeYLCEpGqNk" alt="Registro">
+        <div class="card-footer">Auth</div>
+      </div>
+      <div class="screen-card" onclick="openModal('carrito')">
+        <div class="card-header"><span class="card-title">Carrito</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhAEJXbs62Dcm-pV8p9GvGC85AsqL4KFi2EEQjHv0ekQg_NmfYEoa0h0s4ftGwGFYUeVWYLxD-1XMX-MuRsAYEJokSeuH5xIgCWa19go_AUQCZ4E6-FzGJONQPoL1DKivNMQmPblIpaXRVOCiwxixud8oAAS38tViFLPA1uEJPsqBBZOYcVCp0KwmiNBkC-Q_gCK-Zvi3jHw0DNxfgtVf7TnBE3p4csVKjK-SCEIkTplK83AbhwnIr0uA" alt="Carrito">
+        <div class="card-footer">Comprador</div>
+      </div>
+      <div class="screen-card" onclick="openModal('checkout')">
+        <div class="card-header"><span class="card-title">Checkout — Entrega</span><span class="card-tag tag-new">Nueva ✨</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uiDdrROWT-0IkmjBgq-lCKcmQHmBUD8t9hBvx6R6Mf-S0viNQTcOxiBsD-MBn-3vZ3vAUDbdxLQq64AkypGGi5RR2lmU-G-ldNsVbSY9uohTcAxqAcFRBZLlGJcWu31tKTWPUzWbCZKrjDQKo3VeJx_RIUYLrWAhBbKF_DzOAtEr4SXGBcK0A5zazM1ErSt_ggh9SJmu-IwBPLAOtyVgmXCDqON0JHPMIZhYO4VgtVqx0gm21cQj7Z2kLY" alt="Checkout">
+        <div class="card-footer">Comprador</div>
+      </div>
+      <div class="screen-card" onclick="openModal('pago')">
+        <div class="card-header"><span class="card-title">Pago y Envío</span><span class="card-tag tag-new">Nueva ✨</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhi41wUL99pt9COTgpcb6trujEt_QvDF5SlTS0pfQYrUGeEWkTTH_y_ygri0L6021TQwfXYkBrk-81rzvf5K_loOplmIbLROntEJ4O6yCArTeroP83mqAmy-CphxQM66z3BdMS1kMttVWIGlztBqGW28YgMiBN6wVH7CPPp3x8FqODwgnH13tSmbCzZr5rXxOw7MJpI-zIkbp4Ypszv9i9vX3Ug0c_wcwcSQ0RFdaKVN6ecY7KX-p0VHmM" alt="Pago">
+        <div class="card-footer">Comprador</div>
+      </div>
+      <div class="screen-card" onclick="openModal('panel-agricultor')">
+        <div class="card-header"><span class="card-title">Panel Agricultor</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uj27W18AMvp1fCAhEthE6CyhVzAdPDxlCzz9j_ZhSCTF05YAIlQRRQVWTv3WzpY9GIullWgcn4HyasTJyXEScxbJ0lufXTFkjHCRO1eee-d7lkUEBKRxDWS_iv9UatXj1lgJLnZit4ir9rxSz2GgKa1kr8tI6Fi3G_Xm4WIduE-zsOphokN6fMk2Bs1TrHCoUqAJh52lRC7g-UwSxXuzcNOkBQfuVJT4n7vTDWW_5uqgAmft_IKyrffyZA" alt="Panel Agricultor">
+        <div class="card-footer">Agricultor</div>
+      </div>
+      <div class="screen-card" onclick="openModal('panel-admin')">
+        <div class="card-header"><span class="card-title">Panel Administrador</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uikZOQJgGdOvLYGW0CHR745ZxirlPcQj7osITrfWSNY8XPOLomdBo2Sib9DmyRebjBf0lrJFMif3Du_hQ_Q6L9k1-1hXP1extu23-KhwHU_9ILD9uDlXm9Vwxt_ZbunUFZtVPGKyPGGtpciY2ygZ1ZWohC3MzL2xQbDSHSUeumB4Ynmh6vJmlpggTpc1mbRUiVFsOm0jGp7ETDjPXI_xQA02kjHhYE_8ufQk5UNsO9iA8eWWGvqMMTENM4" alt="Admin">
+        <div class="card-footer">Admin</div>
+      </div>
+      <div class="screen-card" onclick="openModal('lista-pedidos')">
+        <div class="card-header"><span class="card-title">Admin — Lista Pedidos</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uiS56-H8v9N1ut-zI65Z48Xji6SgC5TTBynVXFhz0PeRlbJJKw29d_dt2CJD6rkgitVRmlDI1Saqocy3q4Rz4UCJ-RJ343vWblaJPnQAb_MmDyzishj1d-CM5usnP800dRUROLYZ4jIs_98OP8XqlMQ-Cp1ilch9belqPoNpBRQwH8m1aOIL2kOvR95wF4BHfiXqLM-hRCcESAj7XV8s2EpXC2sluSATeCK7NhFm78ValNpMKNQ6QjsrQw" alt="Lista Pedidos">
+        <div class="card-footer">Admin</div>
+      </div>
+      <div class="screen-card" onclick="openModal('detalle-pedido')">
+        <div class="card-header"><span class="card-title">Admin — Detalle Pedido</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0ugYpD73ETjdqadcsJlfRCX1DSnTp4vgq_OtVmSJMDV2XW30-2aIJiIBo9245_IZmqgPl7LPxOBzbaS4XTGZfNmd7kMDsUWL_2xWgTckayEDYQqvKI4gbDf-RGUgK2R6bubmX5R6mgTLz9jzaI0bZjP-Vh6cUs634uw-p0H8WDyW7EhZgayFOiDrpCfI5aSscVQ9953jm7Qe-D2kZCaDEMAnAskpLW9WqOUQiU_yt7TMyF76kfSSWssF7sE" alt="Detalle Pedido">
+        <div class="card-footer">Admin</div>
+      </div>
+      <div class="screen-card" onclick="openModal('lista-agricultores')">
+        <div class="card-header"><span class="card-title">Admin — Lista Agricultores</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uiIiQ28ZqC94vDnXnpJItmgh_3TrgxJh0a9xsyHO_9aA5g0izjnHHTNaGYVSuP3JAnxJlf9afAmKwEDUdvt89nbA5rbzz0sjx8mzqVcL-Bz-HtY3iLDSzMDpAOxgLwR2uC61waJZUUqzwJqVV1EVtwY0uz05CJi3vM0Sx-1UIpfCbARDk2HdRixJzhN7auuQzLDwoWAIZk2HcQzcyDFO1GIKqrH2IzgF1Kr5yliZNQ_mkq0ttWbsUQdCtE" alt="Lista Agricultores">
+        <div class="card-footer">Admin</div>
+      </div>
+      <div class="screen-card" onclick="openModal('detalle-agricultor')">
+        <div class="card-header"><span class="card-title">Admin — Detalle Agricultor</span><span class="card-tag tag-exists">Existe</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0ugqS3anj7QkoTq-yQnPx9K0iVAONLpiNpEmlpvIwH7HDJd_MZ4x4fV5vqPYHW-id_sljL591ltlnCiPb3-qPo0gZ83zyqcuSwVgwylsvf5Ah7TbpaWkPytqKK9K3TX9rVnF0jKTFycZRUjhjb4iZWJv2p-DPTXGy75E3rYx89-wyTYjfQT0Yh2-RmFPs2OKg0B0g4pBwRH3eGAmm6Ln0eFv15dwlO__XNg1WG2D-CG7LhP8jCf5qLoYVg" alt="Detalle Agricultor">
+        <div class="card-footer">Admin</div>
+      </div>
+      <div class="screen-card" onclick="openModal('portal-institucional')">
+        <div class="card-header"><span class="card-title">Portal Institucional</span><span class="card-tag tag-new">Nueva ✨</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uipJA8vlFMgf_wPio51JNazFlk4lprYwu6vZzwLowGbrtU5c52GVl4Ja-Z5J9vzwAKMLyUNsUB5Q8FvmpqtQUAloJzrYYPq2MRIToanu9fUGL5bbqhZP0yfTU396nnvv5lUWII8H1nGLppoZLwZKQ4ogSNYM1ZqW8trUKWZ8o383gm5REDhEDMTlEEXw6nH3DOT0ZE5ihs3i2RRYLdY7aXQ0fC6mgPz_sdpD2vpyLcKdFmyX6DvH0CZP9c" alt="Portal Institucional">
+        <div class="card-footer">Institucional</div>
+      </div>
+      <div class="screen-card" onclick="openModal('trazabilidad')">
+        <div class="card-header"><span class="card-title">Trazabilidad de Lote</span><span class="card-tag tag-new">Nueva ✨</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0uhmZYa19WlTf9h4ziXZA1Pl2fZY0J_nMwFgR-cCZmH93ejjXl7CncJ5uNsRfj3Os87cnADvBs57RGYH-MY2CXSFSILGq0XQXa94uAwrtWOyuj-GIq5RX2SlJcm6UEzAkgJ9iNBzQggEIoH_e6io6x1apconzHkcLOtB1WvycAwxqzmlv1TXxPjZA53ebHTajLHugW4nZp9OrVge1IFzaD9_-2KPh41NX08MRaIy9Kw1cSseTtfOhwM-hEc" alt="Trazabilidad">
+        <div class="card-footer">Público / Legal</div>
+      </div>
+      <div class="screen-card" onclick="openModal('confirmacion')">
+        <div class="card-header"><span class="card-title">Confirmación de Pedido</span><span class="card-tag tag-new">Nueva ✨</span></div>
+        <img class="screen-thumb" src="https://lh3.googleusercontent.com/aida/ADBb0ugez1hMCz6ZTDT6EyRMb4oAEeLjhXEuAnHS6-5_2WHSS-wKbmFTIbe6A9OWGREW9Hx1KnXThKLsOOrc8a0DDzlsPXOLogcwNSNSfr3dESIiQI6IQnfIENKSv7pjoSZR1yNYSNF5_y5jstoW-tnN1eLJGi1SQx0iPQK8xMiKpupjWTcqap6sE7h2s6efITfe4z3EgrzA5RC8VhgTNs10wvfAo9E6djkGTwDrKBEx7fwSJfIZDSOVP3YHDw" alt="Confirmación">
+        <div class="card-footer">Comprador</div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /viewer -->
+
+<!-- ── MODAL ── -->
+<div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Pantalla</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-nav" id="modalNav"></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+const screens = {
+  'inicio': {
+    title: 'Landing / Inicio',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uhVJhzM71fGR0-rk5Gp-nBeXO8aCgH0xox57MDSHOQrgt0WOfwVAWlhPAtamkZ37icNItGS7xWpzof54WfPRaNEUezPiz66dAuVmx4jh19hfaUwD05wp7AZ4a6mEu0vDMfkc-JM5WqnSsgAICeSvjVXy0alT2IgMAOjTcqNTRQhzNks_XGHLlIAICXv9gu1ARwd4LSHSinR4TixQV7-OEHW5FSbcZxyOraqhiHWkpK0DB2bNuSvQ3q7VbE',
+    next: ['catalogo', 'acceso'], prev: []
+  },
+  'catalogo': {
+    title: 'Catálogo con Paginación',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uiQrRQ-gLUjaK6A9TNFTHIxD2esKjWV6-eDn0WAIPO2d3lxrOn5mgBZUopZ1bpMaLWMMHWarNegZlJSiaO52xptMd1sqayvqApG8xGWIApHCbSNJXo3BPLxqfhH-mP8xZSfn3kvAzKy4PoryXcu19cWLXb9E5pPR_y2mfA4iDid2gd0omM7mLVvV1rDDkK222iKygSlAXcD1W8isFNOqkOJyVIxINZbY59BWSx9z7bpUrtt-yFStTYx_v0',
+    next: ['detalle', 'vista-rapida'], prev: ['inicio']
+  },
+  'detalle': {
+    title: 'Detalle de Producto',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uhF8EMtQ3SMXzus-uPedU_qEdBPFlkftHo7IOwRk_BCNNeRfHjcBXsKlfzFKUIc-VBsg4QhEfZ-Ib53VJwcycg-bJkHdYpxPLYt-RH86gKCgzxyH7ZaJ9lZC73JBHQ4hrIrqJb-3Y47NNNqGPj9i0b4a73G5hh6KYT_KM_z-CPFz90dFPb67QQyBmaL2BoXNc2f38wIAnZ008ffdnNUYuW3u19dPi_Cv0Oxzn_f1qusHOhGTyhKA10Qgg0',
+    next: ['carrito', 'trazabilidad'], prev: ['catalogo']
+  },
+  'vista-rapida': {
+    title: 'Vista Rápida Producto',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uhw3Lgj1aD7bvTWOAITfXEqK2zp49SHMfofmXnbAftDDBCa2Z4XUs6Zhm25oVWKbo7ClyGSayY-EnVuhhyLMt_2gbbeb8aXq9OWJrFT7zjbu5YzBqmuVVKrr5JtIjsRx0lZuqXn6bs7yHffTOrzi3g01tuhsVwhaQcDqYDVB5nYoEnaAqtKawNX8vY_9vO3F87MWOtKNwTo4RCA7XrFxkWPYy5N4qgLJNi56zObKRE64D_IO2icAHxku30',
+    next: ['carrito'], prev: ['catalogo']
+  },
+  'acceso': {
+    title: 'Acceso / Login',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0ujZNKOkcSx7GTh44rrl5-vuR2E1DFuDIgbfQvyGKJhVu8Jod9Uzg7-_ZskdYVFduRNr2yMiEezg5DLsa29vlsIvD_2jpWo_QFjHhWu6cQ8A9P3kqewEJhBQCwFjKObDzKl1ckf011Pty2BWddafLwQpApxL1NBCaQ3MmYoxzwPafndr-0JZjOYdGeLUeazZ0pawFtkkXhEKFgSSPeWwgRrWp9IhiQrSXjIETiNT-CNGL1qhleqRLIyI-KI',
+    next: ['catalogo', 'panel-agricultor', 'panel-admin', 'portal-institucional'], prev: ['inicio', 'registro']
+  },
+  'registro': {
+    title: 'Registro de Usuario',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uhrprxzt4Z-Yrgxy6sonugcD0_oA2iwhGeW2VPDZL1KzbZRcWAOhG1sl3TPQhjg4kwUQnEmfI8EqNEhuSBoGKkpaHQwbTo32ma108wzqaa4OSavPFY2ATdZipcEpOuyfhYI0k-te2yiLS75OgonCNoOjgAZgEAxuj0A2vU2Jnb0h9KPPDs9qNWM7f3w2tzYGiugbFV7fyFAL2QBspNNLe1dW15AMToFc2iXqAoVyu9MkEpwbeYLCEpGqNk',
+    next: ['acceso'], prev: []
+  },
+  'carrito': {
+    title: 'Carrito de Cosecha',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uhAEJXbs62Dcm-pV8p9GvGC85AsqL4KFi2EEQjHv0ekQg_NmfYEoa0h0s4ftGwGFYUeVWYLxD-1XMX-MuRsAYEJokSeuH5xIgCWa19go_AUQCZ4E6-FzGJONQPoL1DKivNMQmPblIpaXRVOCiwxixud8oAAS38tViFLPA1uEJPsqBBZOYcVCp0KwmiNBkC-Q_gCK-Zvi3jHw0DNxfgtVf7TnBE3p4csVKjK-SCEIkTplK83AbhwnIr0uA',
+    next: ['checkout'], prev: ['detalle']
+  },
+  'checkout': {
+    title: 'Checkout — Información de Entrega',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uiDdrROWT-0IkmjBgq-lCKcmQHmBUD8t9hBvx6R6Mf-S0viNQTcOxiBsD-MBn-3vZ3vAUDbdxLQq64AkypGGi5RR2lmU-G-ldNsVbSY9uohTcAxqAcFRBZLlGJcWu31tKTWPUzWbCZKrjDQKo3VeJx_RIUYLrWAhBbKF_DzOAtEr4SXGBcK0A5zazM1ErSt_ggh9SJmu-IwBPLAOtyVgmXCDqON0JHPMIZhYO4VgtVqx0gm21cQj7Z2kLY',
+    next: ['pago'], prev: ['carrito']
+  },
+  'pago': {
+    title: 'Pago y Envío',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uhi41wUL99pt9COTgpcb6trujEt_QvDF5SlTS0pfQYrUGeEWkTTH_y_ygri0L6021TQwfXYkBrk-81rzvf5K_loOplmIbLROntEJ4O6yCArTeroP83mqAmy-CphxQM66z3BdMS1kMttVWIGlztBqGW28YgMiBN6wVH7CPPp3x8FqODwgnH13tSmbCzZr5rXxOw7MJpI-zIkbp4Ypszv9i9vX3Ug0c_wcwcSQ0RFdaKVN6ecY7KX-p0VHmM',
+    next: ['confirmacion'], prev: ['checkout']
+  },
+  'confirmacion': {
+    title: 'Confirmación de Pedido',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0ugez1hMCz6ZTDT6EyRMb4oAEeLjhXEuAnHS6-5_2WHSS-wKbmFTIbe6A9OWGREW9Hx1KnXThKLsOOrc8a0DDzlsPXOLogcwNSNSfr3dESIiQI6IQnfIENKSv7pjoSZR1yNYSNF5_y5jstoW-tnN1eLJGi1SQx0iPQK8xMiKpupjWTcqap6sE7h2s6efITfe4z3EgrzA5RC8VhgTNs10wvfAo9E6djkGTwDrKBEx7fwSJfIZDSOVP3YHDw',
+    next: ['inicio', 'catalogo'], prev: ['pago']
+  },
+  'panel-agricultor': {
+    title: 'Panel del Agricultor',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uj27W18AMvp1fCAhEthE6CyhVzAdPDxlCzz9j_ZhSCTF05YAIlQRRQVWTv3WzpY9GIullWgcn4HyasTJyXEScxbJ0lufXTFkjHCRO1eee-d7lkUEBKRxDWS_iv9UatXj1lgJLnZit4ir9rxSz2GgKa1kr8tI6Fi3G_Xm4WIduE-zsOphokN6fMk2Bs1TrHCoUqAJh52lRC7g-UwSxXuzcNOkBQfuVJT4n7vTDWW_5uqgAmft_IKyrffyZA',
+    next: [], prev: ['acceso']
+  },
+  'panel-admin': {
+    title: 'Panel Administrador',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uikZOQJgGdOvLYGW0CHR745ZxirlPcQj7osITrfWSNY8XPOLomdBo2Sib9DmyRebjBf0lrJFMif3Du_hQ_Q6L9k1-1hXP1extu23-KhwHU_9ILD9uDlXm9Vwxt_ZbunUFZtVPGKyPGGtpciY2ygZ1ZWohC3MzL2xQbDSHSUeumB4Ynmh6vJmlpggTpc1mbRUiVFsOm0jGp7ETDjPXI_xQA02kjHhYE_8ufQk5UNsO9iA8eWWGvqMMTENM4',
+    next: ['lista-pedidos', 'lista-agricultores'], prev: []
+  },
+  'lista-pedidos': {
+    title: 'Admin — Lista de Pedidos',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uiS56-H8v9N1ut-zI65Z48Xji6SgC5TTBynVXFhz0PeRlbJJKw29d_dt2CJD6rkgitVRmlDI1Saqocy3q4Rz4UCJ-RJ343vWblaJPnQAb_MmDyzishj1d-CM5usnP800dRUROLYZ4jIs_98OP8XqlMQ-Cp1ilch9belqPoNpBRQwH8m1aOIL2kOvR95wF4BHfiXqLM-hRCcESAj7XV8s2EpXC2sluSATeCK7NhFm78ValNpMKNQ6QjsrQw',
+    next: ['detalle-pedido'], prev: ['panel-admin']
+  },
+  'detalle-pedido': {
+    title: 'Admin — Detalle de Pedido',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0ugYpD73ETjdqadcsJlfRCX1DSnTp4vgq_OtVmSJMDV2XW30-2aIJiIBo9245_IZmqgPl7LPxOBzbaS4XTGZfNmd7kMDsUWL_2xWgTckayEDYQqvKI4gbDf-RGUgK2R6bubmX5R6mgTLz9jzaI0bZjP-Vh6cUs634uw-p0H8WDyW7EhZgayFOiDrpCfI5aSscVQ9953jm7Qe-D2kZCaDEMAnAskpLW9WqOUQiU_yt7TMyF76kfSSWssF7sE',
+    next: [], prev: ['lista-pedidos']
+  },
+  'lista-agricultores': {
+    title: 'Admin — Lista de Agricultores',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uiIiQ28ZqC94vDnXnpJItmgh_3TrgxJh0a9xsyHO_9aA5g0izjnHHTNaGYVSuP3JAnxJlf9afAmKwEDUdvt89nbA5rbzz0sjx8mzqVcL-Bz-HtY3iLDSzMDpAOxgLwR2uC61waJZUUqzwJqVV1EVtwY0uz05CJi3vM0Sx-1UIpfCbARDk2HdRixJzhN7auuQzLDwoWAIZk2HcQzcyDFO1GIKqrH2IzgF1Kr5yliZNQ_mkq0ttWbsUQdCtE',
+    next: ['detalle-agricultor'], prev: ['panel-admin']
+  },
+  'detalle-agricultor': {
+    title: 'Admin — Detalle de Agricultor',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0ugqS3anj7QkoTq-yQnPx9K0iVAONLpiNpEmlpvIwH7HDJd_MZ4x4fV5vqPYHW-id_sljL591ltlnCiPb3-qPo0gZ83zyqcuSwVgwylsvf5Ah7TbpaWkPytqKK9K3TX9rVnF0jKTFycZRUjhjb4iZWJv2p-DPTXGy75E3rYx89-wyTYjfQT0Yh2-RmFPs2OKg0B0g4pBwRH3eGAmm6Ln0eFv15dwlO__XNg1WG2D-CG7LhP8jCf5qLoYVg',
+    next: [], prev: ['lista-agricultores']
+  },
+  'portal-institucional': {
+    title: 'Portal Institucional',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uipJA8vlFMgf_wPio51JNazFlk4lprYwu6vZzwLowGbrtU5c52GVl4Ja-Z5J9vzwAKMLyUNsUB5Q8FvmpqtQUAloJzrYYPq2MRIToanu9fUGL5bbqhZP0yfTU396nnvv5lUWII8H1nGLppoZLwZKQ4ogSNYM1ZqW8trUKWZ8o383gm5REDhEDMTlEEXw6nH3DOT0ZE5ihs3i2RRYLdY7aXQ0fC6mgPz_sdpD2vpyLcKdFmyX6DvH0CZP9c',
+    next: ['trazabilidad'], prev: ['acceso']
+  },
+  'trazabilidad': {
+    title: 'Trazabilidad Pública de Lote',
+    img: 'https://lh3.googleusercontent.com/aida/ADBb0uhmZYa19WlTf9h4ziXZA1Pl2fZY0J_nMwFgR-cCZmH93ejjXl7CncJ5uNsRfj3Os87cnADvBs57RGYH-MY2CXSFSILGq0XQXa94uAwrtWOyuj-GIq5RX2SlJcm6UEzAkgJ9iNBzQggEIoH_e6io6x1apconzHkcLOtB1WvycAwxqzmlv1TXxPjZA53ebHTajLHugW4nZp9OrVge1IFzaD9_-2KPh41NX08MRaIy9Kw1cSseTtfOhwM-hEc',
+    next: [], prev: ['portal-institucional', 'detalle']
+  }
+};
+
+let currentScreen = null;
+
+function showFlow(id) {
+  document.querySelectorAll('.flow-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.flow-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('flow-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function openModal(id) {
+  const s = screens[id];
+  if (!s) return;
+  currentScreen = id;
+  document.getElementById('modalTitle').textContent = s.title;
+  document.getElementById('modalBody').innerHTML = `<img src="${s.img}" alt="${s.title}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-full\\'><p>Imagen no disponible</p></div>'">`;
+
+  const nav = document.getElementById('modalNav');
+  nav.innerHTML = '';
+  if (s.prev.length) {
+    s.prev.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'modal-nav-btn';
+      btn.textContent = '← ' + (screens[p]?.title || p);
+      btn.onclick = () => openModal(p);
+      nav.appendChild(btn);
+    });
+  }
+  const cur = document.createElement('button');
+  cur.className = 'modal-nav-btn active-nav';
+  cur.textContent = s.title;
+  nav.appendChild(cur);
+  if (s.next.length) {
+    s.next.forEach(n => {
+      const btn = document.createElement('button');
+      btn.className = 'modal-nav-btn';
+      btn.textContent = (screens[n]?.title || n) + ' →';
+      btn.onclick = () => openModal(n);
+      nav.appendChild(btn);
+    });
+  }
+
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>

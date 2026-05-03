@@ -125,10 +125,12 @@ export function Navbar() {
 
           {/* Mobile menu */}
           <Sheet>
-            <SheetTrigger className="md:hidden">
-              <Button variant="ghost" size="icon" className="text-on-primary hover:bg-primary-container">
-                <Menu className="w-5 h-5" />
-              </Button>
+            <SheetTrigger className={cn(
+              "md:hidden",
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              "text-on-primary hover:bg-primary-container"
+            )}>
+              <Menu className="w-5 h-5" />
             </SheetTrigger>
             <SheetContent side="right" className="bg-surface w-72">
               <nav className="flex flex-col gap-4 mt-8">
