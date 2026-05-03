@@ -93,33 +93,57 @@ export default function HomePage() {
 
           {/* Hero image grid */}
           <div className="hidden lg:grid grid-cols-2 gap-3 h-[420px]">
-            <div className="relative rounded-md overflow-hidden row-span-2">
+            <Link
+              href="/productos/papa-criolla-boyaca"
+              className="relative rounded-md overflow-hidden row-span-2 block group cursor-pointer shadow-lg hover:shadow-xl transition-all duration-500"
+            >
               <Image
-                src="https://images.unsplash.com/photo-1518977676405-d9a72e2fc2dd?w=600&q=80"
+                src="/images/papa-criolla.png"
                 alt="Papa criolla colombiana"
                 fill
-                className="object-cover"
+                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
                 priority
               />
-            </div>
-            <div className="relative rounded-md overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+                <span className="text-white font-epilogue font-bold text-lg translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                  Papa Criolla Boyacá
+                </span>
+              </div>
+            </Link>
+            <Link
+              href="/productos/tomate-chonto-antioquia"
+              className="relative rounded-md overflow-hidden block group cursor-pointer shadow-md hover:shadow-lg transition-all duration-500"
+            >
               <Image
                 src="https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&q=80"
                 alt="Tomate fresco"
                 fill
-                className="object-cover"
+                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
                 priority
               />
-            </div>
-            <div className="relative rounded-md overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                <span className="text-white font-epilogue font-semibold text-base translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                  Tomate Chonto
+                </span>
+              </div>
+            </Link>
+            <Link
+              href="/catalogo"
+              className="relative rounded-md overflow-hidden block group cursor-pointer shadow-md hover:shadow-lg transition-all duration-500"
+            >
               <Image
                 src="https://images.unsplash.com/photo-1566842600175-97dca489844f?w=600&q=80"
                 alt="Agricultor colombiano"
                 fill
-                className="object-cover"
+                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
                 priority
               />
-            </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                <span className="text-white font-epilogue font-semibold text-base translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                  Nuestros Agricultores
+                </span>
+              </div>
+            </Link>
           </div>
         </div>
 

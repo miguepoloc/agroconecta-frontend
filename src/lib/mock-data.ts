@@ -102,8 +102,8 @@ export const mockProducts: Product[] = [
     description:
       "Papa criolla de primera calidad cultivada en las laderas del Valle de Tenza, Boyacá. Ideal para ajiaco, papas chorreadas y frituras. Cosechada en los últimos 3 días.",
     images: [
-      "https://images.unsplash.com/photo-1518977676405-d9a72e2fc2dd?w=800&q=80",
-      "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&q=80",
+      "/images/papa-criolla.png",
+      "/images/papa-criolla-2.png",
     ],
     farmerId: "farmer-1",
     farmer: mockFarmers[0],
@@ -269,7 +269,7 @@ export const mockProducts: Product[] = [
     description:
       "Maracuyá orgánico del Eje Cafetero con altísimo contenido de jugo. Libre de agroquímicos. Certificado Orgánico y FairTrade. Perfecto para jugos, cócteles y postres.",
     images: [
-      "https://images.unsplash.com/photo-1604495772376-9657f0035f0e?w=800&q=80",
+      "/images/maracuya.png",
     ],
     farmerId: "farmer-4",
     farmer: mockFarmers[3],
