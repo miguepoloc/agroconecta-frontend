@@ -8,11 +8,8 @@ import { FarmerCard } from "@/components/farmer-card";
 import { ImpactBanner } from "@/components/impact-banner";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { mockProducts, mockFarmers } from "@/lib/mock-data";
+import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-
-const featuredProducts = mockProducts.filter((p) => p.featured).slice(0, 3);
-const featuredFarmers = mockFarmers.filter((f) => f.sustainabilityRank === "Gold").slice(0, 3);
 
 const stats = [
   { label: "Agricultores activos", value: "1,240+", icon: Users },
@@ -42,7 +39,18 @@ const propositos = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  let featuredProducts = [];
+  let featuredFarmers = [];
+  
+  try {
+    featuredProducts = await apiClient.get<any[]>("/api/v1/products/featured?limit=3");
+    // As a fallback/placeholder if farmers API is not returning exactly featured, we grab a few
+    featuredFarmers = await apiClient.get<any[]>("/api/v1/farmers?rank=gold&page_size=3");
+  } catch (e) {
+    console.error("Failed to fetch home page data", e);
+  }
+
   return (
     <>
       <Navbar />

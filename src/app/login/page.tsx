@@ -40,7 +40,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     await new Promise((r) => setTimeout(r, 600));
-    const ok = login(email, password);
+    const ok = await login(email, password);
     setLoading(false);
     if (!ok) {
       setError("Correo o contraseña incorrectos. Prueba con demo123.");
@@ -53,8 +53,8 @@ export default function LoginPage() {
     router.push(DASHBOARD[role as UserRole] ?? "/catalogo");
   }
 
-  function handleQuickLogin(role: UserRole) {
-    loginAs(role);
+  async function handleQuickLogin(role: UserRole) {
+    await loginAs(role);
     router.push(DASHBOARD[role]);
   }
 

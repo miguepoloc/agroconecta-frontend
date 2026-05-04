@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Trash2, ShoppingBag, ArrowRight, ChevronLeft } from "lucide-react";
@@ -10,21 +11,34 @@ import { ProductCard } from "@/components/product-card";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { useCart } from "@/lib/cart-context";
-import { mockProducts, formatCOP } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import { formatCOP, cn } from "@/lib/utils";
+import { apiClient } from "@/lib/api-client";
+import type { Product } from "@/lib/types";
 
 const DELIVERY_FEE = 15000;
 const FREE_DELIVERY_THRESHOLD = 200000;
 
 export default function CarritoPage() {
   const { items, removeItem, updateQuantity, clearCart, subtotal } = useCart();
+  const [suggested, setSuggested] = useState<Product[]>([]);
+
+  useEffect(() => {
+    async function fetchSuggested() {
+      try {
+        const products = await apiClient.get<Product[]>("/api/v1/products/featured?limit=5");
+        const filtered = products
+          .filter((p) => !items.some((i) => i.productId === p.id))
+          .slice(0, 3);
+        setSuggested(filtered);
+      } catch (error) {
+        console.error("Failed to fetch suggested products", error);
+      }
+    }
+    fetchSuggested();
+  }, [items]);
 
   const delivery = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const total = subtotal + delivery;
-
-  const suggested = mockProducts
-    .filter((p) => !items.some((i) => i.productId === p.id) && p.featured)
-    .slice(0, 3);
 
   if (items.length === 0) {
     return (

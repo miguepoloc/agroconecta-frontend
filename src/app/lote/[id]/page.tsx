@@ -11,8 +11,9 @@ import { FarmerCard } from "@/components/farmer-card";
 import { FreshnessBadge } from "@/components/freshness-badge";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { mockProducts, formatCOP } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import { formatCOP, cn } from "@/lib/utils";
+import { apiClient } from "@/lib/api-client";
+import type { Product } from "@/lib/types";
 
 const certColors: Record<string, string> = {
   GlobalGAP: "bg-primary-container text-on-primary-container",
@@ -24,7 +25,13 @@ const certColors: Record<string, string> = {
 
 export default async function LotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const product = mockProducts.find((p) => p.lotNumber === id);
+  let product: Product | null = null;
+  
+  try {
+    product = await apiClient.get<Product>(`/api/v1/products/lot/${id}`);
+  } catch (error) {
+    console.error(`Failed to fetch lot ${id}`, error);
+  }
 
   if (!product) notFound();
 
@@ -161,8 +168,4 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
       <Footer />
     </>
   );
-}
-
-export async function generateStaticParams() {
-  return mockProducts.map((p) => ({ id: p.lotNumber }));
 }

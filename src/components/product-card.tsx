@@ -7,7 +7,7 @@ import { ShoppingCart, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QuickViewModal } from "@/components/quick-view-modal";
-import { formatCOP } from "@/lib/mock-data";
+import { formatCOP } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
 interface ProductCardProps {
@@ -32,8 +32,10 @@ export function ProductCard({ product, variant = "catalog" }: ProductCardProps) 
     );
   }
 
-  const isOrganic = product.certifications.includes("Orgánico");
-  const isFresh = product.freshnessScore > 90;
+  const isOrganic = product.certifications?.includes("Orgánico") ?? false;
+  const isFresh = (product.freshnessScore ?? 0) > 90;
+  
+  const farmerName = product.farmer?.name || "Agricultor Colombiano";
 
   return (
     <>
@@ -44,7 +46,7 @@ export function ProductCard({ product, variant = "catalog" }: ProductCardProps) 
           className="relative block aspect-[4/3] w-full overflow-hidden text-left"
         >
           <Image
-            src={product.images[0]}
+            src={product.images?.[0] || "/images/placeholder.png"}
             alt={product.name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
@@ -83,7 +85,7 @@ export function ProductCard({ product, variant = "catalog" }: ProductCardProps) 
           <div className="flex items-center gap-1.5 text-on-surface-variant">
             <MapPin className="w-4 h-4 shrink-0" />
             <span className="text-sm truncate">
-              {product.farmer.name.includes("Finca") ? product.farmer.name : `Finca ${product.farmer.name}`}
+              {farmerName.includes("Finca") ? farmerName : `Finca ${farmerName}`}
             </span>
           </div>
 

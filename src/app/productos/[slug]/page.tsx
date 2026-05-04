@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,10 +14,11 @@ import { TraceabilityTimeline } from "@/components/traceability-timeline";
 import { ProductCard } from "@/components/product-card";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { getProductBySlug, mockProducts, formatCOP } from "@/lib/mock-data";
 import { useCart } from "@/lib/cart-context";
-import { cn } from "@/lib/utils";
+import { cn, formatCOP } from "@/lib/utils";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api-client";
+import type { Product } from "@/lib/types";
 
 const certColors: Record<string, string> = {
   GlobalGAP: "bg-primary-container text-on-primary-container",
@@ -29,16 +30,52 @@ const certColors: Record<string, string> = {
 
 export default function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const product = getProductBySlug(slug);
+  
+  const [product, setProduct] = useState<Product | null>(null);
+  const [related, setRelated] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const { addItem } = useCart();
-  const [quantity, setQuantity] = useState(product?.minimumLot ?? 1);
+  const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
 
-  if (!product) notFound();
+  useEffect(() => {
+    async function fetchProduct() {
+      try {
+        const data = await apiClient.get<Product>(`/api/v1/products/${slug}`);
+        setProduct(data);
+        setQuantity(data.minimumLot ?? 1);
+        
+        // Fetch related products in the same category
+        try {
+          const relatedData = await apiClient.get<Product[]>(`/api/v1/products?category=${data.category}&limit=4`);
+          setRelated(relatedData.filter(p => p.id !== data.id).slice(0, 3));
+        } catch (e) {
+          console.error("Failed to fetch related products", e);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProduct();
+  }, [slug]);
 
-  const related = mockProducts
-    .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 3);
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-6 py-24 text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-on-surface-variant font-medium">Cargando producto...</p>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (!product) notFound();
 
   function handleAddToCart() {
     addItem(product!, quantity);
@@ -111,14 +148,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-2">
                 <Badge className="bg-surface-container text-on-surface-variant text-xs border-0">{product.category}</Badge>
-                {product.certifications.map((cert) => (
+                {(product.certifications || []).map((cert) => (
                   <Badge key={cert} className={cn("text-xs border-0", certColors[cert] ?? "bg-muted text-muted-foreground")}>
                     {cert}
                   </Badge>
                 ))}
               </div>
               <h1 className="font-epilogue font-bold text-3xl text-on-surface mb-1">{product.name}</h1>
-              <p className="text-sm text-on-surface-variant">{product.farmer.region}, {product.farmer.department}</p>
+              <p className="text-sm text-on-surface-variant">{product.farmer?.region || "Región Andina"}, {product.farmer?.department || "Boyacá"}</p>
             </div>
 
             {/* Price */}
@@ -242,14 +279,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
             {/* Traceability */}
             <div>
               <h2 className="font-epilogue font-bold text-xl text-on-surface mb-4">Camino a tu mesa</h2>
-              <TraceabilityTimeline steps={product.traceabilityChain} />
+              <TraceabilityTimeline steps={product.traceabilityChain || []} />
             </div>
           </div>
 
           {/* Farmer */}
           <div>
             <h2 className="font-epilogue font-bold text-xl text-on-surface mb-4">Productor</h2>
-            <FarmerCard farmer={product.farmer} variant="full" />
+            {product.farmer && <FarmerCard farmer={product.farmer} variant="full" />}
           </div>
         </div>
 

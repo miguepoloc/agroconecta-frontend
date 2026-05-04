@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, Suspense } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SlidersHorizontal, X } from "lucide-react";
@@ -11,8 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { ProductCard } from "@/components/product-card";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { mockProducts } from "@/lib/mock-data";
-import type { ProductCategory } from "@/lib/types";
+import { apiClient } from "@/lib/api-client";
+import type { ProductCategory, Product } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES: ProductCategory[] = ["Verduras", "Frutas", "Granos", "Tubérculos", "Hortalizas", "Lácteos"];
@@ -34,6 +34,23 @@ function CatalogoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const data = await apiClient.get<Product[]>("/api/v1/products?page_size=100");
+        setProducts(data);
+      } catch (err) {
+        console.error("Failed to load products", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProducts();
+  }, []);
+
   const categoria = searchParams.get("categoria") as ProductCategory | null;
   const orden = searchParams.get("orden") ?? "featured";
   const lote = searchParams.get("lote") ?? "any";
@@ -50,10 +67,10 @@ function CatalogoContent() {
   }
 
   const filtered = useMemo(() => {
-    let list = [...mockProducts];
+    let list = [...products];
 
     if (categoria) list = list.filter((p) => p.category === categoria);
-    if (cert) list = list.filter((p) => p.certifications.includes(cert as never));
+    if (cert) list = list.filter((p) => p.certifications?.includes(cert as never));
     if (lote !== "any") list = list.filter((p) => p.minimumLot >= Number(lote));
 
     switch (orden) {
@@ -71,7 +88,7 @@ function CatalogoContent() {
     }
 
     return list;
-  }, [categoria, cert, orden, lote]);
+  }, [products, categoria, cert, orden, lote]);
 
   const activeFilters = [
     categoria && { key: "categoria", label: categoria },

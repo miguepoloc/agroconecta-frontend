@@ -5,7 +5,7 @@ import Image from "next/image";
 import { X, Minus, Plus, ShoppingCart, Eye, Leaf, Tractor } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useCart } from "@/lib/cart-context";
-import { formatCOP } from "@/lib/mock-data";
+import { formatCOP } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -33,10 +33,11 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
   const increment = () => setQuantity((q) => q + 1);
   const decrement = () => setQuantity((q) => Math.max(1, q - 1));
 
-  const originLocation = product.traceabilityChain?.[0]?.location || `${product.farmer.department}, Colombia`;
+  const farmerDepartment = product.farmer?.department || "Boyacá";
+  const originLocation = product.traceabilityChain?.[0]?.location || `${farmerDepartment}, Colombia`;
   const harvestMethod = product.traceabilityChain?.[0]?.notes || "Cosechado manualmente en su punto exacto de madurez para garantizar el máximo sabor y valor nutricional.";
 
-  const isOrganic = product.certifications.includes("Orgánico");
+  const isOrganic = product.certifications?.includes("Orgánico") ?? false;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
